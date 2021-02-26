@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # bin/compile <build_dir> <cache_dir> <env_dir>
 
+set -e
+
 base_dir="${PWD}"
 build_dir="${1}"
 cache_dir="${2}"
@@ -30,12 +32,16 @@ export_env_dir() {
 }
 
 init() {
+  echo "========== Setting up build =========="
+
   if [[ ! -d "${cache_dir}" ]]; then
     mkdir -p "${cache_dir}"
   fi
 }
 
 install_java() {
+  echo "========== Installing Java =========="
+
   if [[ -d "${java_dir}" ]]; then
     echo "Using ${java_dir}"
   else
@@ -53,6 +59,8 @@ install_java() {
 }
 
 run_gradle_target() {
+  echo "========== Running Gradle target =========="
+
   build_target=${BUILD_TARGET:-build}
 
   echo "Using build target ${build_target}"
@@ -63,10 +71,12 @@ run_gradle_target() {
 }
 
 move_tar() {
+  echo "========== Moving built tar =========="
+
   mkdir -p "${build_dir}/build/out"
 
   for f in $(find "${build_dir}/build/distributions" -name "*.tar"); do
-    tar -xvzf "${f}" -C "${build_dir}/build/out"
+    tar -xvf "${f}" -C "${build_dir}/build/out"
 
     dir=$(basename "${f}" | sed 's|\.tar||g')
 
@@ -81,6 +91,8 @@ move_tar() {
 }
 
 setup_procfile() {
+  echo "========== Generating Procfile =========="
+
   for f in $(find "${build_dir}/bin" -type f | grep -v '.bat'); do
     binary=$(basename "${f}")
 
