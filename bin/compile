@@ -91,10 +91,10 @@ setup_procfile() {
 }
 
 main() {
-  # init
-  # export_env_dir
-  # install_java
-  # run_gradle_target
+  init
+  export_env_dir
+  install_java
+  run_gradle_target
   move_tar
   setup_procfile
 }
