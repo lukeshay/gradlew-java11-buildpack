@@ -11,6 +11,8 @@ echo "build_dir ${build_dir}"
 echo "cache_dir ${cache_dir}"
 echo "env_dir ${env_dir}"
 
+export GRADLE_USER_HOME="${cache_dir}/.gradle"
+
 java_dir="${cache_dir}/jdk-11.0.2"
 java_tarball="${java_dir}.tar.gz"
 
@@ -74,15 +76,13 @@ move_tar() {
     break
   done
 
-  find "${build_dir}" -maxdepth 1 -type f -delete
-  rm -rf "${build_dir}/build" "${build_dir}/src" "${build_dir}/gradle" "${build_dir}/.git" "${build_dir}/.github" "${build_dir}/.idea"
+  # find "${build_dir}" -maxdepth 1 -type f -delete
+  # rm -rf "${build_dir}/build" "${build_dir}/src" "${build_dir}/gradle" "${build_dir}/.git" "${build_dir}/.github" "${build_dir}/.idea"
 }
 
 setup_procfile() {
   for f in $(find "${build_dir}/bin" -type f | grep -v '.bat'); do
     binary=$(basename "${f}")
-
-    echo "${binary}"
 
     DYNO_TYPE=${DYNO_TYPE:-worker}
 
