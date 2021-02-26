@@ -2,5 +2,12 @@
 # bin/release <build_dir>
 
 build_dir="${1}"
+process=$(cat Procfile)
 
-echo "--- {}"
+cat << EOF
+---
+addons:
+  - heroku-postgresql
+default_process_types:
+  ${process}
+EOF
