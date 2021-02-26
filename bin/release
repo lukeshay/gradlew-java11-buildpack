@@ -1,0 +1,6 @@
+#! /usr/bin/env bash
+# bin/release <build_dir>
+
+build_dir="${1}"
+
+echo "--- {}"

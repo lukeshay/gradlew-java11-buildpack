@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# bin/detect <build_dir>
+
+build_dir="${1}/"
+
+[[ -f "${build_dir}/gradlew" ]] && [[ -d "${build_dir}/gradle" ]] && [[ -d "${build_dir}/src" ]] || exit 1
+[[ -f "${build_dir}/build.gradle" ]] || [[ -f "${build_dir}/build.gradle.kts" ]] || exit 1
+
+exit 0
