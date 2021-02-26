@@ -3,113 +3,90 @@
 
 set -e
 
+BP_DIR=$(cd $(dirname $0)/..; pwd)
+
+. "${BP_DIR}/lib/common"
+
 base_dir="${PWD}"
 build_dir="${1}"
 cache_dir="${2}"
 env_dir="${3}"
+generated_env_dir="${build_dir}/env"
 
 echo "base_dir ${base_dir}"
 echo "build_dir ${build_dir}"
 echo "cache_dir ${cache_dir}"
 echo "env_dir ${env_dir}"
+echo ""
 
-export GRADLE_USER_HOME="${cache_dir}/.gradle"
+GRADLE_USER_HOME="${cache_dir}/.gradle"
 
-java_dir="${cache_dir}/jdk-11.0.2"
-java_tarball="${java_dir}.tar.gz"
 
-export_env_dir() {
-  env_dir=$1
-  acceptlist_regex=${2:-''}
-  denylist_regex=${3:-'^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'}
-  if [[ -d "$env_dir" ]]; then
-    for e in $(ls $env_dir); do
-      echo "$e" | grep -E "$acceptlist_regex" | grep -qvE "$denylist_regex" &&
-      export "$e=$(cat $env_dir/$e)"
-      :
-    done
-  fi
-}
+log_step "Setting up build"
 
-init() {
-  echo "========== Setting up build =========="
+test -d "${cache_dir}" || mkdir -p "${cache_dir}" || exit 1
+test -d "${generated_env_dir}" || mkdir -p "${generated_env_dir}" || exit 1
 
-  if [[ ! -d "${cache_dir}" ]]; then
-    mkdir -p "${cache_dir}"
-  fi
-}
 
-install_java() {
-  echo "========== Installing Java =========="
+log_step "Exporting env dir"
 
-  if [[ -d "${java_dir}" ]]; then
-    echo "Using ${java_dir}"
-  else
-    echo "Installing OpenJDK 11"
-    
-    if [[ ! -f "${java_tarball}" ]]; then
-      curl -L https://download.java.net/java/GA/jdk11/9/GPL/openjdk-11.0.2_linux-x64_bin.tar.gz -o "${java_tarball}"
-    fi
+export_env_dir "${env_dir}"
 
-    tar -xvzf "${java_tarball}" -C "${cache_dir}"
+
+log_step "Setting up Java"
+
+if [[ ! -d "/tmp/java" ]]; then
+  java_tarball="${cache_dir}/jdk-11.0.2.tar.gz"
+  
+  if [[ ! -f "${java_tarball}" ]]; then
+    curl -L https://download.java.net/java/GA/jdk11/9/GPL/openjdk-11.0.2_linux-x64_bin.tar.gz -o "${java_tarball}"
   fi
 
-  export JAVA_HOME="${java_dir}"
-  export PATH="${PATH}:${JAVA_HOME}/bin"
-}
+  tar -xvzf "${java_tarball}" -C "/tmp/java"
+fi
 
-run_gradle_target() {
-  echo "========== Running Gradle target =========="
+JAVA_HOME="/tmp/java"
+PATH="${PATH}:${JAVA_HOME}/bin"
 
-  build_target=${BUILD_TARGET:-build}
 
-  echo "Using build target ${build_target}"
+log_step "Running Gradle target"
 
-  cd "${build_dir}"
+gradle_target=${GRADLE_TARGET:-build}
 
-  ./gradlew "${build_target}"
-}
+echo "Using build target ${gradle_target}"
 
-move_tar() {
-  echo "========== Moving built tar =========="
+cd "${build_dir}"
 
-  mkdir -p "${build_dir}/build/out"
+./gradlew "${gradle_target}"
 
-  for f in $(find "${build_dir}/build/distributions" -name "*.tar"); do
-    tar -xvf "${f}" -C "${build_dir}/build/out"
 
-    dir=$(basename "${f}" | sed 's|\.tar||g')
+log_step "Moving built tar"
 
-    mv -f "${build_dir}/build/out/${dir}/bin" "${build_dir}/bin"
-    mv -f "${build_dir}/build/out/${dir}/lib" "${build_dir}/lib"
+distributions_dir="${build_dir}/build/distributions"
 
-    break
-  done
+for f in $(find "${distributions_dir}" -name "*.tar"); do
+  dir=$(echo "${f}" | sed 's|\.tar||g')
+  tar -xvf "${f}" -C "${distributions_dir}"
 
-  # find "${build_dir}" -maxdepth 1 -type f -delete
-  # rm -rf "${build_dir}/build" "${build_dir}/src" "${build_dir}/gradle" "${build_dir}/.git" "${build_dir}/.github" "${build_dir}/.idea"
-}
 
-setup_procfile() {
-  echo "========== Generating Procfile =========="
+  mv -f "${dir}/bin" "${build_dir}/bin"
+  mv -f "${dir}/lib" "${build_dir}/lib"
 
-  for f in $(find "${build_dir}/bin" -type f | grep -v '.bat'); do
-    binary=$(basename "${f}")
+  break
+done
 
-    DYNO_TYPE=${DYNO_TYPE:-worker}
 
-    echo "${DYNO_TYPE}: bin/${binary}" >> "${build_dir}/Procfile"
-  done
-}
+log_step "Generating Procfile"
 
-main() {
-  init
-  export_env_dir
-  install_java
-  run_gradle_target
-  move_tar
-  setup_procfile
-}
+for f in $(find "${build_dir}/bin" -type f | grep -v '.bat'); do
+  binary=$(basename "${f}")
 
-main
+  DYNO_TYPE=${DYNO_TYPE:-worker}
 
+  echo "${DYNO_TYPE}: bin/${binary}" >> "${build_dir}/Procfile"
+done
+
+
+log_step "Generating env"
+
+echo "${JAVA_HOME}" > "${generated_env_dir}/JAVA_HOME"

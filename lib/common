@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+log_step() {
+  echo ""
+  echo "========== ${@} =========="
+}
+
+export_env_dir() {
+  acceptlist_regex=''
+  denylist_regex='^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'
+
+  if [[ -d "${1}" ]]; then
+    for e in $(ls ${1}); do
+      echo "$e" | grep -E "${acceptlist_regex}" | grep -qvE "${denylist_regex}" &&
+      export "$e=$(cat ${1}/$e)"
+      :
+    done
+  fi
+}

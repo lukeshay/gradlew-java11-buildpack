@@ -1,8 +1,17 @@
 #! /usr/bin/env bash
 # bin/release <build_dir>
 
+set -e
+
+BP_DIR=$(cd $(dirname $0)/..; pwd)
+
+. "${BP_DIR}/lib/common"
+
 build_dir="${1}"
+generated_env_dir="${build_dir}/env"
 process=$(cat Procfile)
+
+export_env_dir "${generated_env_dir}"
 
 cat << EOF
 ---
